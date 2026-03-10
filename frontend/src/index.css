@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================
+   THEME TOKENS (RGB)
+========================= */
+:root{
+  --bg: 250 250 250;
+  --card: 255 255 255;
+  --text: 24 24 27;
+  --muted: 113 113 122;
+  --border: 228 228 231;
+  --brand: 37 99 235; /* blue */
+  --shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+html.dark{
+  --bg: 9 9 11;
+  --card: 24 24 27;
+  --text: 244 244 245;
+  --muted: 161 161 170;
+  --border: 63 63 70;
+  --brand: 236 72 153; /* pink */
+  --shadow: 0 12px 34px rgba(0,0,0,0.45);
+}
+
+/* =========================
+   BASE
+========================= */
+html, body { height: 100%; }
+
+body{
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* smoother feel */
+*{
+  box-sizing: border-box;
+  transition: background-color .20s ease, border-color .20s ease, color .20s ease;
+}
+
+/* nicer selection highlight */
+::selection{
+  background: rgba(var(--brand), .25);
+}
+
+/* remove default focus outline but keep accessibility via focus-visible */
+:focus{ outline: none; }
+:focus-visible{
+  outline: 2px solid rgba(var(--brand), .55);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* =========================
+   FORMS
+========================= */
+input, textarea, select{
+  outline: none;
+  color: rgb(var(--text));
+}
+
+input::placeholder,
+textarea::placeholder{
+  color: rgba(var(--muted), .85);
+}
+
+/* optional: remove blue autofill bg in chrome */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus{
+  -webkit-text-fill-color: rgb(var(--text));
+  -webkit-box-shadow: 0 0 0px 1000px rgba(var(--card), .98) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* =========================
+   SCROLLBAR (nice)
+========================= */
+*{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--muted), .45) transparent;
+}
+
+*::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track{
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb{
+  background: rgba(var(--muted), .35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover{
+  background: rgba(var(--muted), .55);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* =========================
+   UTIL CLASSES (global)
+========================= */
+.shadow-soft{
+  box-shadow: var(--shadow);
+}
+
+.glass{
+  background: rgba(var(--card), .75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--border), 1);
+}
+
+.ig-ring{
+  background: linear-gradient(45deg, #ff3ea5, #ff6a3d, #ffd43b);
+  padding: 2px;
+  border-radius: 9999px;
+}
+
+.ig-ring > .ig-ring-inner{
+  background: rgb(var(--card));
+  padding: 2px;
+  border-radius: 9999px;
+}
+
+/* =========================
+   SMALL ANIMATIONS
+========================= */
+@keyframes floaty{
+  0%{ transform: translateY(0); }
+  50%{ transform: translateY(-6px); }
+  100%{ transform: translateY(0); }
+}
+.floaty{ animation: floaty 4s ease-in-out infinite; }
+
+@keyframes shine{
+  0%{ transform: translateX(-120%); }
+  100%{ transform: translateX(120%); }
+}
+.shine{
+  position: relative;
+  overflow: hidden;
+}
+.shine::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  transform: translateX(-120%);
+  animation: shine 2.8s ease-in-out infinite;
+}
+
+/* =========================
+   OPTIONAL: smoother page scroll
+========================= */
+html{ scroll-behavior: smooth; }
+select option{
+  color: rgb(var(--text));
+  background: rgb(var(--card));
+}
+
+button:disabled{
+  cursor: not-allowed;
+}
+
+a{
+  color: inherit;
+}
+
+
+.file-input::file-selector-button{
+  margin-right: 12px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgb(var(--brand));
+  color: white;
+}
+
+button, a, input, textarea, select{
+  transition: background-color .20s ease, border-color .20s ease, color .20s ease, opacity .20s ease, transform .12s ease;
+}
+
+button:not(:disabled):active{
+  transform: scale(.99);
+}
