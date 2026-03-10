@@ -3,6 +3,12 @@ import IGShell from "../components/IGShell";
 import MotionPage from "../components/MotionPage";
 import StoryBar from "../components/StoryBar";
 import JobCard from "../components/JobCard";
+import StatsOverview from "../components/StatsOverview";
+import QuickActions from "../components/QuickActions";
+import AppFooter from "../components/AppFooter";
+import PageLoader from "../components/PageLoader";
+import EmptyPanel from "../components/EmptyPanel";
+import { useToast } from "../components/ToastProvider";
 import { api, user } from "../lib/api";
 import { SparkHeader } from "../components/Illustrations";
 import { mockJobsBLR } from "../data/mockJobs";
@@ -11,9 +17,11 @@ const TAGS = ["Internship", "Frontend", "Backend", "Design", "Remote", "MERN", "
 
 export default function Feed() {
   const me = user();
+  const toast = useToast();
 
   const [stories, setStories] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [msg, setMsg] = useState("");
 
   const [loadingStories, setLoadingStories] = useState(false);
@@ -24,14 +32,11 @@ export default function Feed() {
   const [type, setType] = useState("");
   const [tag, setTag] = useState("");
 
-  // Apply modal state (instead of prompt)
   const [applyOpen, setApplyOpen] = useState(false);
   const [applyJob, setApplyJob] = useState(null);
   const [fullName, setFullName] = useState("");
 
-  // Debounce timer
   const tRef = useRef(null);
-
   const tagOptions = useMemo(() => TAGS, []);
 
   async function loadStories() {
@@ -43,6 +48,19 @@ export default function Feed() {
       setStories([]);
     } finally {
       setLoadingStories(false);
+    }
+  }
+
+  async function loadApplications() {
+    try {
+      if (me?.role === "student") {
+        const apps = await api("/api/applications/my");
+        setApplications(Array.isArray(apps) ? apps : []);
+      } else {
+        setApplications([]);
+      }
+    } catch {
+      setApplications([]);
     }
   }
 
@@ -63,21 +81,22 @@ export default function Feed() {
     } catch (e) {
       setJobs([]);
       setMsg(e.message || "Failed to load jobs");
+      toast?.show(e.message || "Failed to load jobs", "error");
     } finally {
       setLoadingJobs(false);
     }
   }
 
-  // Initial load
   useEffect(() => {
     loadStories();
     loadJobs();
+    loadApplications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Smooth auto-search (debounced) when filters change
   useEffect(() => {
     if (tRef.current) clearTimeout(tRef.current);
+
     tRef.current = setTimeout(() => {
       loadJobs({ q, location, type, tag });
     }, 350);
@@ -88,7 +107,6 @@ export default function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, location, type, tag]);
 
-  // Premium fallback list (Bangalore) if API gives 0 jobs
   const displayJobs = useMemo(() => {
     const fromApi = Array.isArray(jobs) ? jobs : [];
     if (fromApi.length > 0) return fromApi;
@@ -107,6 +125,7 @@ export default function Feed() {
     setType("");
     setTag("");
     setLocation("Bengaluru");
+    toast?.show("Filters reset", "info");
   }
 
   function openApply(job) {
@@ -119,18 +138,29 @@ export default function Feed() {
   async function confirmApply() {
     try {
       if (!applyJob?._id) return;
-      if (!fullName.trim()) return setMsg("Please enter full name");
+
+      if (!fullName.trim()) {
+        setMsg("Please enter full name");
+        return toast?.show("Please enter full name", "error");
+      }
 
       await api("/api/applications", {
         method: "POST",
-        body: { jobId: applyJob._id, fullName, resumeUrl: me?.resumeUrl || "" },
+        body: {
+          jobId: applyJob._id,
+          fullName,
+          resumeUrl: me?.resumeUrl || "",
+        },
       });
 
       setApplyOpen(false);
       setApplyJob(null);
       setMsg("Applied ✅ Open Tracker to see status");
+      toast?.show("Application submitted successfully", "success");
+      loadApplications();
     } catch (e) {
       setMsg(e.message);
+      toast?.show(e.message || "Failed to apply", "error");
     }
   }
 
@@ -143,10 +173,16 @@ export default function Feed() {
             subtitle="Premium IG-style job feed • Stories • Apply in one tap"
           />
 
-          {/* Stories */}
+          <QuickActions me={me} />
+
+          <StatsOverview me={me} jobs={displayJobs} applications={applications} />
+
           <div
             className="border rounded-3xl p-3"
-            style={{ background: "rgba(var(--card),0.75)", borderColor: "rgb(var(--border))" }}
+            style={{
+              background: "rgba(var(--card),0.75)",
+              borderColor: "rgb(var(--border))",
+            }}
           >
             {loadingStories ? (
               <div className="flex gap-3 overflow-auto">
@@ -163,10 +199,12 @@ export default function Feed() {
             )}
           </div>
 
-          {/* Search Panel */}
           <div
             className="border rounded-3xl p-4 md:p-5 shadow-sm"
-            style={{ background: "rgba(var(--card),0.85)", borderColor: "rgb(var(--border))" }}
+            style={{
+              background: "rgba(var(--card),0.85)",
+              borderColor: "rgb(var(--border))",
+            }}
           >
             <div className="grid md:grid-cols-4 gap-3">
               <input
@@ -240,27 +278,19 @@ export default function Feed() {
             </div>
 
             <p className="text-xs mt-3" style={{ color: "rgb(var(--muted))" }}>
-              If database has no jobs, we still show curated Bengaluru jobs (premium fallback list).
+              If database has no jobs, we still show curated Bengaluru jobs.
             </p>
           </div>
 
-          {/* Feed */}
           {loadingJobs ? (
-            <div className="space-y-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="border rounded-3xl p-5 animate-pulse"
-                  style={{ borderColor: "rgb(var(--border))", background: "rgba(var(--card),0.75)" }}
-                >
-                  <div className="h-5 w-2/3 rounded" style={{ background: "rgb(var(--border))" }} />
-                  <div className="mt-3 h-4 w-full rounded" style={{ background: "rgb(var(--border))" }} />
-                  <div className="mt-2 h-4 w-5/6 rounded" style={{ background: "rgb(var(--border))" }} />
-                </div>
-              ))}
-            </div>
+            <PageLoader lines={4} />
           ) : displayJobs.length === 0 ? (
-            <EmptyState onReset={resetFilters} />
+            <EmptyPanel
+              title="No jobs found"
+              subtitle="Try changing filters or reset to Bengaluru defaults."
+              buttonText="Reset filters"
+              onClick={resetFilters}
+            />
           ) : (
             <div className="space-y-4">
               {displayJobs.map((j) => (
@@ -273,15 +303,22 @@ export default function Feed() {
               ))}
             </div>
           )}
+
+          <AppFooter />
         </div>
 
-        {/* Apply Modal */}
         {applyOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setApplyOpen(false)} />
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setApplyOpen(false)}
+            />
             <div
               className="relative w-full max-w-lg border rounded-3xl p-5 shadow-xl"
-              style={{ background: "rgba(var(--card),0.92)", borderColor: "rgb(var(--border))" }}
+              style={{
+                background: "rgba(var(--card),0.92)",
+                borderColor: "rgb(var(--border))",
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -293,6 +330,7 @@ export default function Feed() {
                     {applyJob?.company?.companyName || "Company"} • {applyJob?.location || "Bengaluru"}
                   </p>
                 </div>
+
                 <button
                   className="px-3 py-1.5 rounded-full border font-bold"
                   style={{ borderColor: "rgb(var(--border))" }}
@@ -336,26 +374,5 @@ export default function Feed() {
         )}
       </MotionPage>
     </IGShell>
-  );
-}
-
-function EmptyState({ onReset }) {
-  return (
-    <div
-      className="border rounded-3xl p-10 text-center"
-      style={{ borderColor: "rgb(var(--border))", background: "rgba(var(--card),0.75)" }}
-    >
-      <p className="text-2xl font-black">No jobs found</p>
-      <p className="mt-2 text-sm" style={{ color: "rgb(var(--muted))" }}>
-        Try changing filters or reset to Bengaluru defaults.
-      </p>
-      <button
-        onClick={onReset}
-        className="mt-5 px-5 py-2.5 rounded-2xl text-white font-extrabold"
-        style={{ background: "rgb(var(--brand))" }}
-      >
-        Reset filters
-      </button>
-    </div>
   );
 }

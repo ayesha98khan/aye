@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthBackdrop from "../components/AuthBackdrop";
+import { useToast } from "../components/ToastProvider";
 import { api } from "../lib/api";
 
 export default function Auth() {
   const nav = useNavigate();
-  const [mode, setMode] = useState("login"); // login | register
+  const toast = useToast();
+
+  const [mode, setMode] = useState("login");
   const isLogin = mode === "login";
 
   const [form, setForm] = useState({
@@ -28,11 +31,26 @@ export default function Auth() {
     e.preventDefault();
     setMsg("");
 
-    if (!form.email || !form.password) return setMsg("Email and password are required.");
+    if (!form.email || !form.password) {
+      setMsg("Email and password are required.");
+      return toast?.show("Email and password are required", "error");
+    }
+
     if (!isLogin) {
-      if (!form.name) return setMsg("Name is required.");
-      if (form.password !== form.confirmPassword) return setMsg("Passwords do not match.");
-      if (form.role === "recruiter" && !form.companyName) return setMsg("Company name is required.");
+      if (!form.name) {
+        setMsg("Name is required.");
+        return toast?.show("Name is required", "error");
+      }
+
+      if (form.password !== form.confirmPassword) {
+        setMsg("Passwords do not match.");
+        return toast?.show("Passwords do not match", "error");
+      }
+
+      if (form.role === "recruiter" && !form.companyName) {
+        setMsg("Company name is required.");
+        return toast?.show("Company name is required", "error");
+      }
     }
 
     try {
@@ -51,20 +69,27 @@ export default function Auth() {
 
       const res = await api(endpoint, { method: "POST", body });
 
-      // assumes backend returns { token, user }
       if (res?.token) localStorage.setItem("token", res.token);
       if (res?.user) localStorage.setItem("user", JSON.stringify(res.user));
+
+      toast?.show(
+        isLogin ? "Logged in successfully" : "Account created successfully",
+        "success"
+      );
 
       nav("/feed");
     } catch (e2) {
       setMsg(e2.message);
+      toast?.show(e2.message || "Authentication failed", "error");
     } finally {
       setBusy(false);
     }
   }
 
   function socialNotReady(provider) {
-    setMsg(`${provider} login UI added ✅ (real login needs OAuth setup in backend)`);
+    const text = `${provider} login UI added ✅ Real login needs OAuth setup in backend`;
+    setMsg(text);
+    toast?.show(`${provider} login is UI only right now`, "info");
   }
 
   return (
@@ -72,20 +97,22 @@ export default function Auth() {
       <AuthBackdrop />
 
       <div className="w-full max-w-4xl grid md:grid-cols-2 gap-6 items-stretch">
-        {/* Left: brand panel */}
         <div
           className="hidden md:flex flex-col justify-between rounded-3xl border p-8 overflow-hidden relative"
           style={{ background: "rgba(var(--card),0.55)", borderColor: "rgb(var(--border))" }}
         >
-          <div className="absolute -right-16 -top-16 w-72 h-72 rounded-full blur-3xl opacity-35"
+          <div
+            className="absolute -right-16 -top-16 w-72 h-72 rounded-full blur-3xl opacity-35"
             style={{ background: "rgb(var(--brand))" }}
           />
-          <div className="absolute -left-16 -bottom-16 w-80 h-80 rounded-full blur-3xl opacity-25"
+          <div
+            className="absolute -left-16 -bottom-16 w-80 h-80 rounded-full blur-3xl opacity-25"
             style={{ background: "#ff3ea5" }}
           />
 
           <div className="relative">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-bold"
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-bold"
               style={{ borderColor: "rgb(var(--border))" }}
             >
               ✦ JobNest
@@ -110,7 +137,6 @@ export default function Auth() {
           </p>
         </div>
 
-        {/* Right: auth card */}
         <div
           className="rounded-3xl border p-6 md:p-8 shadow-sm backdrop-blur"
           style={{ background: "rgba(var(--card),0.82)", borderColor: "rgb(var(--border))" }}
@@ -128,7 +154,6 @@ export default function Auth() {
             </button>
           </div>
 
-          {/* Social buttons */}
           <div className="mt-5 grid gap-3">
             <button
               type="button"
@@ -225,7 +250,11 @@ export default function Auth() {
 
             {isLogin && (
               <div className="flex justify-end">
-                <Link to="/forgot" className="text-sm font-bold hover:underline" style={{ color: "rgb(var(--brand))" }}>
+                <Link
+                  to="/forgot"
+                  className="text-sm font-bold hover:underline"
+                  style={{ color: "rgb(var(--brand))" }}
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -239,7 +268,11 @@ export default function Auth() {
               {busy ? "Please wait..." : isLogin ? "Login" : "Create account"}
             </button>
 
-            {msg && <p className="text-sm mt-2" style={{ color: "rgb(var(--muted))" }}>{msg}</p>}
+            {msg && (
+              <p className="text-sm mt-2" style={{ color: "rgb(var(--muted))" }}>
+                {msg}
+              </p>
+            )}
           </form>
 
           <p className="mt-6 text-xs" style={{ color: "rgb(var(--muted))" }}>
@@ -257,7 +290,9 @@ function MiniStat({ title, value }) {
       className="rounded-2xl border p-3"
       style={{ background: "rgba(var(--card),0.6)", borderColor: "rgb(var(--border))" }}
     >
-      <p className="text-xs font-bold" style={{ color: "rgb(var(--muted))" }}>{title}</p>
+      <p className="text-xs font-bold" style={{ color: "rgb(var(--muted))" }}>
+        {title}
+      </p>
       <p className="text-sm font-black">{value}</p>
     </div>
   );

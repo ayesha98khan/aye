@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import IGShell from "../components/IGShell";
 import MotionPage from "../components/MotionPage";
 import { SparkHeader } from "../components/Illustrations";
+import { useToast } from "../components/ToastProvider";
 import { api, uploadFile, user as getUser } from "../lib/api";
 
 export default function Profile() {
+  const toast = useToast();
+
   const [me, setMe] = useState(getUser());
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -21,20 +24,28 @@ export default function Profile() {
         setMe(fresh);
       } catch (e) {
         setMsg(e.message);
+        toast?.show(e.message || "Failed to load profile", "error");
       }
     })();
-  }, []);
+  }, [toast]);
 
   async function save() {
     try {
       setBusy(true);
       setMsg("");
-      const updated = await api("/api/users/me", { method: "PUT", body: me });
+
+      const updated = await api("/api/users/me", {
+        method: "PUT",
+        body: me,
+      });
+
       localStorage.setItem("user", JSON.stringify(updated));
       setMe(updated);
       setMsg("Saved ✅");
+      toast?.show("Profile saved successfully", "success");
     } catch (e) {
       setMsg(e.message);
+      toast?.show(e.message || "Failed to save profile", "error");
     } finally {
       setBusy(false);
     }
@@ -42,14 +53,21 @@ export default function Profile() {
 
   async function uploadResume() {
     try {
-      if (!resumeFile) return setMsg("Choose a resume first.");
+      if (!resumeFile) {
+        setMsg("Choose a resume first.");
+        return toast?.show("Choose a resume first", "error");
+      }
+
       setBusy(true);
       setMsg("Uploading resume...");
+
       const url = await uploadFile("/api/upload/resume", resumeFile);
       setMe((m) => ({ ...m, resumeUrl: url }));
       setMsg("Resume uploaded ✅ (click Save)");
+      toast?.show("Resume uploaded successfully", "success");
     } catch (e) {
       setMsg(e.message);
+      toast?.show(e.message || "Failed to upload resume", "error");
     } finally {
       setBusy(false);
     }
@@ -57,14 +75,21 @@ export default function Profile() {
 
   async function uploadLogo() {
     try {
-      if (!logoFile) return setMsg("Choose a logo first.");
+      if (!logoFile) {
+        setMsg("Choose a logo first.");
+        return toast?.show("Choose a logo first", "error");
+      }
+
       setBusy(true);
       setMsg("Uploading logo...");
+
       const url = await uploadFile("/api/upload/image", logoFile);
       setMe((m) => ({ ...m, companyLogoUrl: url }));
       setMsg("Logo uploaded ✅ (click Save)");
+      toast?.show("Logo uploaded successfully", "success");
     } catch (e) {
       setMsg(e.message);
+      toast?.show(e.message || "Failed to upload logo", "error");
     } finally {
       setBusy(false);
     }
@@ -72,14 +97,25 @@ export default function Profile() {
 
   async function addPhoto() {
     try {
-      if (!photoFile) return setMsg("Choose a photo first.");
+      if (!photoFile) {
+        setMsg("Choose a photo first.");
+        return toast?.show("Choose a photo first", "error");
+      }
+
       setBusy(true);
       setMsg("Uploading photo...");
+
       const url = await uploadFile("/api/upload/image", photoFile);
-      setMe((m) => ({ ...m, companyPhotos: [...(m.companyPhotos || []), url] }));
+      setMe((m) => ({
+        ...m,
+        companyPhotos: [...(m.companyPhotos || []), url],
+      }));
+
       setMsg("Photo added ✅ (click Save)");
+      toast?.show("Photo added successfully", "success");
     } catch (e) {
       setMsg(e.message);
+      toast?.show(e.message || "Failed to add photo", "error");
     } finally {
       setBusy(false);
     }
