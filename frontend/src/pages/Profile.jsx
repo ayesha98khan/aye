@@ -93,13 +93,11 @@ export default function Profile() {
   return (
     <IGShell>
       <MotionPage>
-        {/* ✅ ADD HEADER HERE */}
         <SparkHeader
           title="Your Profile"
           subtitle="Edit profile • Upload resume/logo • IG grid"
         />
 
-        {/* ✅ Main profile card below header */}
         <div
           className="border rounded-3xl p-5 shadow-sm mt-5"
           style={{
@@ -107,14 +105,17 @@ export default function Profile() {
             borderColor: "rgb(var(--border))",
           }}
         >
-          {/* Top row */}
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-400">
               <div
                 className="w-full h-full rounded-full p-[2px]"
                 style={{ background: "rgb(var(--card))" }}
               >
-                <img className="w-full h-full rounded-full object-cover" src={avatar} alt="" />
+                <img
+                  className="w-full h-full rounded-full object-cover"
+                  src={avatar}
+                  alt=""
+                />
               </div>
             </div>
 
@@ -130,11 +131,12 @@ export default function Profile() {
                 <button
                   disabled={busy}
                   onClick={save}
-                  className="px-5 py-2.5 rounded-2xl text-white font-extrabold disabled:opacity-60"
+                  className="px-5 py-2.5 rounded-2xl text-white font-extrabold disabled:opacity-60 hover:opacity-90 transition"
                   style={{ background: "rgb(var(--brand))" }}
                 >
                   Save
                 </button>
+
                 {msg && (
                   <span className="text-sm" style={{ color: "rgb(var(--muted))" }}>
                     {msg}
@@ -144,7 +146,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Form */}
           <div className="mt-6 grid md:grid-cols-2 gap-4">
             <Field label="Name">
               <input
@@ -207,14 +208,19 @@ export default function Profile() {
                     title="Resume (PDF)"
                     subtitle={me?.resumeUrl ? "Resume linked ✅" : "Upload once, then click Save."}
                   >
-                    <input className="file-input w-full border rounded-2xl p-2 bg-transparent" style={{ borderColor: "rgb(var(--border))" }} type="file" onChange={(e) => setResumeFile(e.target.files?.[0] || null)} />
+                    <input
+                      type="file"
+                      className="w-full border rounded-2xl p-2 bg-transparent"
+                      style={{ borderColor: "rgb(var(--border))" }}
+                      onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                    />
                     <button
                       disabled={busy}
-                      className="px-4 py-2 rounded-2xl font-extrabold text-white disabled:opacity-60"
-                      style={{ background: "rgb(var(--text))" }}
                       onClick={uploadResume}
+                      className="px-4 py-2 rounded-2xl font-extrabold text-white disabled:opacity-60 hover:opacity-90 transition"
+                      style={{ background: "#2563eb" }}
                     >
-                      Upload
+                      Upload Resume
                     </button>
                   </UploadCard>
                 </div>
@@ -226,35 +232,42 @@ export default function Profile() {
                 <div className="md:col-span-2">
                   <UploadCard title="Company Logo" subtitle="Shows on jobs + stories.">
                     <input
-                      className="file-input w-full border rounded-2xl p-2 bg-transparent" style={{ borderColor: "rgb(var(--border))" }} type="file"
+                      type="file"
                       accept="image/*"
+                      className="w-full border rounded-2xl p-2 bg-transparent"
+                      style={{ borderColor: "rgb(var(--border))" }}
                       onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
                     />
                     <button
                       disabled={busy}
-                      className="px-4 py-2 rounded-2xl font-extrabold text-white disabled:opacity-60"
-                      style={{ background: "rgb(var(--text))" }}
                       onClick={uploadLogo}
+                      className="px-4 py-2 rounded-2xl font-extrabold text-white disabled:opacity-60 hover:opacity-90 transition"
+                      style={{ background: "#2563eb" }}
                     >
-                      Upload
+                      Upload Logo
                     </button>
                   </UploadCard>
                 </div>
 
                 <div className="md:col-span-2">
-                  <UploadCard title="Company Feed Photos (IG Grid)" subtitle="Add photos like IG posts.">
+                  <UploadCard
+                    title="Company Feed Photos (IG Grid)"
+                    subtitle="Add photos like IG posts."
+                  >
                     <input
-                      className="file-input w-full border rounded-2xl p-2 bg-transparent" style={{ borderColor: "rgb(var(--border))" }} type="file"
+                      type="file"
                       accept="image/*"
+                      className="w-full border rounded-2xl p-2 bg-transparent"
+                      style={{ borderColor: "rgb(var(--border))" }}
                       onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
                     />
                     <button
                       disabled={busy}
-                      className="px-4 py-2 rounded-2xl font-extrabold text-white disabled:opacity-60"
-                      style={{ background: "rgb(var(--brand))" }}
                       onClick={addPhoto}
+                      className="px-4 py-2 rounded-2xl font-extrabold text-white disabled:opacity-60 hover:opacity-90 transition"
+                      style={{ background: "#16a34a" }}
                     >
-                      Add
+                      Add Photo
                     </button>
                   </UploadCard>
 
@@ -290,7 +303,10 @@ function Field({ label, children }) {
 
 function UploadCard({ title, subtitle, children }) {
   return (
-    <div className="border rounded-3xl p-4" style={{ borderColor: "rgb(var(--border))" }}>
+    <div
+      className="border rounded-3xl p-4"
+      style={{ borderColor: "rgb(var(--border))" }}
+    >
       <p className="font-black">{title}</p>
       <p className="text-sm mt-1" style={{ color: "rgb(var(--muted))" }}>
         {subtitle}

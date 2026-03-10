@@ -54,11 +54,15 @@ export default function IGShell({ children }) {
           <div className="flex items-center gap-1 md:gap-2">
             <NavBtn to="/feed" icon={Home} label="Feed" />
             <NavBtn to="/profile" icon={User} label="Profile" />
-            {me?.role === "student" && <NavBtn to="/applications" icon={ListChecks} label="Tracker" />}
-            {me?.role === "recruiter" && <NavBtn to="/recruiter" icon={Briefcase} label="Recruiter" />}
+            {me?.role === "student" && (
+              <NavBtn to="/applications" icon={ListChecks} label="Tracker" />
+            )}
+            {me?.role === "recruiter" && (
+              <NavBtn to="/recruiter" icon={Briefcase} label="Recruiter" />
+            )}
 
             <button
-              className="ml-1 flex items-center gap-2 px-3 py-2 rounded-full text-sm font-bold border"
+              className="ml-1 flex items-center gap-2 px-3 py-2 rounded-full text-sm font-bold border hover:opacity-90 transition"
               style={{ borderColor: "rgb(var(--border))" }}
               onClick={() => setShowTheme((v) => !v)}
               title="Theme"
@@ -68,8 +72,8 @@ export default function IGShell({ children }) {
             </button>
 
             <button
-              className="ml-1 flex items-center gap-2 px-3 py-2 rounded-full text-sm font-bold text-white"
-              style={{ background: "rgb(var(--text))" }}
+              className="ml-1 flex items-center gap-2 px-3 py-2 rounded-full text-sm font-bold text-white hover:opacity-90 transition"
+              style={{ background: "#ef4444" }}
               onClick={() => {
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
