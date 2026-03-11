@@ -23,33 +23,41 @@ export default function Auth() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
-  function set(k, v) {
-    setForm((p) => ({ ...p, [k]: v }));
+  function setField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   async function submit(e) {
     e.preventDefault();
     setMsg("");
 
-    if (!form.email || !form.password) {
-      setMsg("Email and password are required.");
-      return toast?.show("Email and password are required", "error");
+    if (!form.email.trim() || !form.password) {
+      const text = "Email and password are required.";
+      setMsg(text);
+      toast?.show(text, "error");
+      return;
     }
 
     if (!isLogin) {
-      if (!form.name) {
-        setMsg("Name is required.");
-        return toast?.show("Name is required", "error");
+      if (!form.name.trim()) {
+        const text = "Name is required.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
 
       if (form.password !== form.confirmPassword) {
-        setMsg("Passwords do not match.");
-        return toast?.show("Passwords do not match", "error");
+        const text = "Passwords do not match.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
 
-      if (form.role === "recruiter" && !form.companyName) {
-        setMsg("Company name is required.");
-        return toast?.show("Company name is required", "error");
+      if (form.role === "recruiter" && !form.companyName.trim()) {
+        const text = "Company name is required.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
     }
 
@@ -57,30 +65,55 @@ export default function Auth() {
       setBusy(true);
 
       const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+
       const body = isLogin
-        ? { email: form.email, password: form.password }
+        ? {
+            email: form.email.trim(),
+            password: form.password,
+          }
         : {
-            name: form.name,
-            email: form.email,
+            name: form.name.trim(),
+            email: form.email.trim(),
             password: form.password,
             role: form.role,
-            companyName: form.role === "recruiter" ? form.companyName : "",
+            companyName: form.role === "recruiter" ? form.companyName.trim() : "",
           };
 
-      const res = await api(endpoint, { method: "POST", body });
+      const res = await api(endpoint, {
+        method: "POST",
+        body,
+        auth: false,
+      });
 
-      if (res?.token) localStorage.setItem("token", res.token);
-      if (res?.user) localStorage.setItem("user", JSON.stringify(res.user));
+      const authToken = res?.token;
+      const authUser = res?.user || {};
 
-      toast?.show(
-        isLogin ? "Logged in successfully" : "Account created successfully",
-        "success"
-      );
+      if (!authToken) {
+        throw new Error("Token not returned from server");
+      }
 
-      nav("/feed");
-    } catch (e2) {
-      setMsg(e2.message);
-      toast?.show(e2.message || "Authentication failed", "error");
+      localStorage.setItem("token", authToken);
+      localStorage.setItem("user", JSON.stringify(authUser));
+
+      if (isLogin) {
+        toast?.show("Logged in successfully", "success");
+        nav("/feed", { replace: true });
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        toast?.show("Account created successfully", "success");
+        setMode("login");
+        setForm((prev) => ({
+          ...prev,
+          password: "",
+          confirmPassword: "",
+        }));
+        setMsg("Account created successfully. Please login.");
+      }
+    } catch (err) {
+      const text = err?.message || "Authentication failed";
+      setMsg(text);
+      toast?.show(text, "error");
     } finally {
       setBusy(false);
     }
@@ -117,9 +150,11 @@ export default function Auth() {
             >
               ✦ JobNest
             </div>
+
             <h1 className="mt-5 text-4xl font-black tracking-tight">
               {isLogin ? "Welcome back." : "Create your account."}
             </h1>
+
             <p className="mt-3 text-sm leading-6" style={{ color: "rgb(var(--muted))" }}>
               Instagram-style job feed • Recruiter stories • Apply in one tap • Track applications
             </p>
@@ -148,7 +183,10 @@ export default function Auth() {
               type="button"
               className="px-3 py-1.5 rounded-full font-bold border text-sm"
               style={{ borderColor: "rgb(var(--border))" }}
-              onClick={() => setMode(isLogin ? "register" : "login")}
+              onClick={() => {
+                setMode(isLogin ? "register" : "login");
+                setMsg("");
+              }}
             >
               {isLogin ? "New? Register" : "Have account? Login"}
             </button>
@@ -189,7 +227,7 @@ export default function Auth() {
                 style={{ borderColor: "rgb(var(--border))" }}
                 placeholder="Full name"
                 value={form.name}
-                onChange={(e) => set("name", e.target.value)}
+                onChange={(e) => setField("name", e.target.value)}
               />
             )}
 
@@ -200,7 +238,7 @@ export default function Auth() {
               autoComplete="email"
               placeholder="Email"
               value={form.email}
-              onChange={(e) => set("email", e.target.value)}
+              onChange={(e) => setField("email", e.target.value)}
             />
 
             {!isLogin && (
@@ -209,7 +247,7 @@ export default function Auth() {
                   className="w-full border rounded-2xl p-3 bg-transparent"
                   style={{ borderColor: "rgb(var(--border))" }}
                   value={form.role}
-                  onChange={(e) => set("role", e.target.value)}
+                  onChange={(e) => setField("role", e.target.value)}
                 >
                   <option value="student">Student</option>
                   <option value="recruiter">Recruiter</option>
@@ -220,7 +258,7 @@ export default function Auth() {
                   style={{ borderColor: "rgb(var(--border))" }}
                   placeholder="Company (recruiter only)"
                   value={form.companyName}
-                  onChange={(e) => set("companyName", e.target.value)}
+                  onChange={(e) => setField("companyName", e.target.value)}
                   disabled={form.role !== "recruiter"}
                 />
               </div>
@@ -233,7 +271,7 @@ export default function Auth() {
               style={{ borderColor: "rgb(var(--border))" }}
               placeholder="Password"
               value={form.password}
-              onChange={(e) => set("password", e.target.value)}
+              onChange={(e) => setField("password", e.target.value)}
             />
 
             {!isLogin && (
@@ -244,7 +282,7 @@ export default function Auth() {
                 style={{ borderColor: "rgb(var(--border))" }}
                 placeholder="Confirm password"
                 value={form.confirmPassword}
-                onChange={(e) => set("confirmPassword", e.target.value)}
+                onChange={(e) => setField("confirmPassword", e.target.value)}
               />
             )}
 

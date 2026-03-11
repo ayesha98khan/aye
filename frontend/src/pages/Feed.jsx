@@ -54,7 +54,7 @@ export default function Feed() {
   async function loadApplications() {
     try {
       if (me?.role === "student") {
-        const apps = await api("/api/applications/my");
+        const apps = await api("/api/applications/mine");
         setApplications(Array.isArray(apps) ? apps : []);
       } else {
         setApplications([]);

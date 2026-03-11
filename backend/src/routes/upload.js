@@ -1,51 +1,55 @@
 const router = require("express").Router();
 const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const requireAuth = require("../middleware/auth");
-const { uploadBuffer } = require("../utils/uploader");
+const User = require("../models/User");
+
+const uploadDir = path.join(__dirname, "..", "uploads", "resumes");
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, `${req.user._id}-${Date.now()}${ext}`);
+  },
+});
 
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: function (req, file, cb) {
+    const allowed = [".pdf", ".doc", ".docx"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowed.includes(ext)) {
+      return cb(new Error("Only PDF, DOC, DOCX files are allowed"));
+    }
+    cb(null, true);
+  },
 });
 
-router.post("/image", requireAuth, upload.single("file"), async (req, res, next) => {
+router.post("/resume", requireAuth, upload.single("resume"), async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file" });
-    if (!String(req.file.mimetype || "").startsWith("image/")) {
-      return res.status(400).json({ message: "Only image files are allowed" });
+    if (!req.file) {
+      return res.status(400).json({ message: "Resume file required" });
     }
 
-    const url = await uploadBuffer(req.file.buffer, {
-      folder: "images",
-      resourceType: "image",
-      originalName: req.file.originalname,
-      mimeType: req.file.mimetype,
-    });
-    res.json({ url });
-  } catch (e) {
-    next(e);
-  }
-});
+    const resumeUrl = `/uploads/resumes/${req.file.filename}`;
 
-router.post("/resume", requireAuth, upload.single("file"), async (req, res, next) => {
-  try {
-    if (!req.file) return res.status(400).json({ message: "No file" });
-    const allowed = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    if (!allowed.includes(req.file.mimetype)) {
-      return res.status(400).json({ message: "Resume must be PDF, DOC, or DOCX" });
-    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { resumeUrl },
+      { new: true }
+    );
 
-    const url = await uploadBuffer(req.file.buffer, {
-      folder: "resumes",
-      resourceType: "raw",
-      originalName: req.file.originalname,
-      mimeType: req.file.mimetype,
+    res.json({
+      message: "Resume uploaded successfully",
+      resumeUrl,
+      user,
     });
-    res.json({ url });
   } catch (e) {
     next(e);
   }

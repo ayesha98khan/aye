@@ -6,7 +6,7 @@ import StatsOverview from "../components/StatsOverview";
 import QuickActions from "../components/QuickActions";
 import AppFooter from "../components/AppFooter";
 import { useToast } from "../components/ToastProvider";
-import { api, uploadFile, user } from "../lib/api";
+import { api, user } from "../lib/api";
 
 export default function RecruiterHub() {
   const me = user();
@@ -17,7 +17,6 @@ export default function RecruiterHub() {
   const [applications, setApplications] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [busyJob, setBusyJob] = useState(false);
-  const [busyStory, setBusyStory] = useState(false);
 
   const [job, setJob] = useState({
     title: "",
@@ -28,17 +27,14 @@ export default function RecruiterHub() {
     tags: [],
   });
 
-  const [storyFile, setStoryFile] = useState(null);
-  const [caption, setCaption] = useState("");
-
   useEffect(() => {
     loadDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadDashboardData() {
     try {
       setLoadingStats(true);
+      setMsg("");
 
       const [jobsData, appsData] = await Promise.all([
         api("/api/jobs"),
@@ -50,7 +46,9 @@ export default function RecruiterHub() {
     } catch (e) {
       setJobs([]);
       setApplications([]);
-      toast?.show(e.message || "Failed to load dashboard data", "error");
+      const text = e?.message || "Failed to load dashboard data";
+      setMsg(text);
+      toast?.show(text, "error");
     } finally {
       setLoadingStats(false);
     }
@@ -58,30 +56,56 @@ export default function RecruiterHub() {
 
   async function createJob() {
     try {
-      if (me?.role !== "recruiter") {
-        setMsg("Recruiters only.");
-        return toast?.show("Recruiters only", "error");
+      if (!me) {
+        const text = "Please login again.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
+      }
+
+      if (me.role !== "recruiter") {
+        const text = "Recruiters only.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
 
       if (!job.title.trim()) {
-        setMsg("Please enter job title.");
-        return toast?.show("Please enter job title", "error");
+        const text = "Please enter job title.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
 
       if (!job.location.trim()) {
-        setMsg("Please enter location.");
-        return toast?.show("Please enter location", "error");
+        const text = "Please enter location.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
 
       if (!job.description.trim()) {
-        setMsg("Please enter description.");
-        return toast?.show("Please enter description", "error");
+        const text = "Please enter description.";
+        setMsg(text);
+        toast?.show(text, "error");
+        return;
       }
 
       setBusyJob(true);
-      setMsg("");
+      setMsg("Posting job...");
 
-      await api("/api/jobs", { method: "POST", body: job });
+      await api("/api/jobs", {
+        method: "POST",
+        body: {
+          title: job.title.trim(),
+          location: job.location.trim(),
+          jobType: job.jobType || "Full-time",
+          salary: job.salary.trim(),
+          description: job.description.trim(),
+          tags: Array.isArray(job.tags) ? job.tags : [],
+        },
+        auth: true,
+      });
 
       setMsg("Job posted ✅");
       toast?.show("Job posted successfully", "success");
@@ -95,47 +119,14 @@ export default function RecruiterHub() {
         tags: [],
       });
 
-      loadDashboardData();
+      await loadDashboardData();
     } catch (e) {
-      setMsg(e.message);
-      toast?.show(e.message || "Failed to post job", "error");
+      const text = e?.message || "Failed to post job";
+      console.error("POST JOB ERROR:", e);
+      setMsg(text);
+      toast?.show(text, "error");
     } finally {
       setBusyJob(false);
-    }
-  }
-
-  async function postStory() {
-    try {
-      if (me?.role !== "recruiter") {
-        setMsg("Recruiters only.");
-        return toast?.show("Recruiters only", "error");
-      }
-
-      if (!storyFile) {
-        setMsg("Pick an image for story.");
-        return toast?.show("Pick an image for story", "error");
-      }
-
-      setBusyStory(true);
-      setMsg("Uploading story...");
-
-      const mediaUrl = await uploadFile("/api/upload/image", storyFile);
-
-      await api("/api/stories", {
-        method: "POST",
-        body: { mediaUrl, caption },
-      });
-
-      setMsg("Story posted ✅");
-      toast?.show("Story posted successfully", "success");
-
-      setStoryFile(null);
-      setCaption("");
-    } catch (e) {
-      setMsg(e.message);
-      toast?.show(e.message || "Failed to post story", "error");
-    } finally {
-      setBusyStory(false);
     }
   }
 
@@ -145,7 +136,7 @@ export default function RecruiterHub() {
         <div className="space-y-5">
           <SparkHeader
             title="Recruiter Hub"
-            subtitle="Post jobs, upload story updates, and manage your hiring brand"
+            subtitle="Post jobs and manage your hiring dashboard"
           />
 
           <QuickActions me={me} />
@@ -180,123 +171,85 @@ export default function RecruiterHub() {
             <StatsOverview me={me} jobs={jobs} applications={applications} />
           )}
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div
-              className="border rounded-3xl p-5 shadow-sm"
-              style={{
-                background: "rgb(var(--card))",
-                borderColor: "rgb(var(--border))",
-              }}
-            >
-              <h2 className="text-xl font-black">Upload Job</h2>
+          <div
+            className="border rounded-3xl p-5 shadow-sm"
+            style={{
+              background: "rgb(var(--card))",
+              borderColor: "rgb(var(--border))",
+            }}
+          >
+            <h2 className="text-xl font-black">Upload Job</h2>
 
-              <div className="mt-4 space-y-3">
-                <input
-                  className="w-full border rounded-2xl p-3 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  placeholder="Job Title"
-                  value={job.title}
-                  onChange={(e) => setJob({ ...job, title: e.target.value })}
-                />
+            <div className="mt-4 space-y-3">
+              <input
+                className="w-full border rounded-2xl p-3 bg-transparent"
+                style={{ borderColor: "rgb(var(--border))" }}
+                placeholder="Job Title"
+                value={job.title}
+                onChange={(e) => setJob({ ...job, title: e.target.value })}
+              />
 
-                <input
-                  className="w-full border rounded-2xl p-3 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  placeholder="Location"
-                  value={job.location}
-                  onChange={(e) => setJob({ ...job, location: e.target.value })}
-                />
+              <input
+                className="w-full border rounded-2xl p-3 bg-transparent"
+                style={{ borderColor: "rgb(var(--border))" }}
+                placeholder="Location"
+                value={job.location}
+                onChange={(e) => setJob({ ...job, location: e.target.value })}
+              />
 
-                <select
-                  className="w-full border rounded-2xl p-3 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  value={job.jobType}
-                  onChange={(e) => setJob({ ...job, jobType: e.target.value })}
-                >
-                  <option>Full-time</option>
-                  <option>Part-time</option>
-                  <option>Internship</option>
-                  <option>Remote</option>
-                </select>
+              <select
+                className="w-full border rounded-2xl p-3 bg-transparent"
+                style={{ borderColor: "rgb(var(--border))" }}
+                value={job.jobType}
+                onChange={(e) => setJob({ ...job, jobType: e.target.value })}
+              >
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Internship">Internship</option>
+                <option value="Remote">Remote</option>
+              </select>
 
-                <input
-                  className="w-full border rounded-2xl p-3 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  placeholder="Salary (optional)"
-                  value={job.salary}
-                  onChange={(e) => setJob({ ...job, salary: e.target.value })}
-                />
+              <input
+                className="w-full border rounded-2xl p-3 bg-transparent"
+                style={{ borderColor: "rgb(var(--border))" }}
+                placeholder="Salary (optional)"
+                value={job.salary}
+                onChange={(e) => setJob({ ...job, salary: e.target.value })}
+              />
 
-                <textarea
-                  className="w-full border rounded-2xl p-3 bg-transparent min-h-[120px]"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  placeholder="Description"
-                  value={job.description}
-                  onChange={(e) => setJob({ ...job, description: e.target.value })}
-                />
+              <textarea
+                className="w-full border rounded-2xl p-3 bg-transparent min-h-[120px]"
+                style={{ borderColor: "rgb(var(--border))" }}
+                placeholder="Description"
+                value={job.description}
+                onChange={(e) => setJob({ ...job, description: e.target.value })}
+              />
 
-                <input
-                  className="w-full border rounded-2xl p-3 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  placeholder="Tags (comma separated)"
-                  value={(job.tags || []).join(", ")}
-                  onChange={(e) =>
-                    setJob({
-                      ...job,
-                      tags: e.target.value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
+              <input
+                className="w-full border rounded-2xl p-3 bg-transparent"
+                style={{ borderColor: "rgb(var(--border))" }}
+                placeholder="Tags (comma separated)"
+                value={(job.tags || []).join(", ")}
+                onChange={(e) =>
+                  setJob({
+                    ...job,
+                    tags: e.target.value
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
 
-                <button
-                  onClick={createJob}
-                  disabled={busyJob}
-                  className="w-full py-3 rounded-2xl text-white font-extrabold hover:opacity-95 transition disabled:opacity-60"
-                  style={{ background: "rgb(var(--brand))" }}
-                >
-                  {busyJob ? "Posting..." : "Post Job"}
-                </button>
-              </div>
-            </div>
-
-            <div
-              className="border rounded-3xl p-5 shadow-sm"
-              style={{
-                background: "rgb(var(--card))",
-                borderColor: "rgb(var(--border))",
-              }}
-            >
-              <h2 className="text-xl font-black">Post Story (24h)</h2>
-
-              <div className="mt-4 space-y-3">
-                <input
-                  className="w-full border rounded-2xl p-2 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setStoryFile(e.target.files?.[0] || null)}
-                />
-
-                <input
-                  className="w-full border rounded-2xl p-3 bg-transparent"
-                  style={{ borderColor: "rgb(var(--border))" }}
-                  placeholder="Caption (optional)"
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                />
-
-                <button
-                  onClick={postStory}
-                  disabled={busyStory}
-                  className="w-full py-3 rounded-2xl text-white font-extrabold hover:opacity-95 transition disabled:opacity-60"
-                  style={{ background: "#2563eb" }}
-                >
-                  {busyStory ? "Posting..." : "Post Story"}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={createJob}
+                disabled={busyJob}
+                className="w-full py-3 rounded-2xl text-white font-extrabold hover:opacity-95 transition disabled:opacity-60"
+                style={{ background: "rgb(var(--brand))" }}
+              >
+                {busyJob ? "Posting..." : "Post Job"}
+              </button>
             </div>
           </div>
 
